@@ -213,7 +213,7 @@ const S = {
 /* ------------------------------------------------------------------ */
 /*  TourOverlay Component                                              */
 /* ------------------------------------------------------------------ */
-function TourOverlay({ stepConfig, step, totalSteps, onNext, onSkip, lang }) {
+function TourOverlay({ stepConfig, step, totalSteps, onNext, onSkip, lang, onLangChange }) {
   const [tooltipStyle, setTooltipStyle] = useState({})
   const [highlightStyle, setHighlightStyle] = useState({})
   const [arrowStyle, setArrowStyle] = useState({})
@@ -309,6 +309,19 @@ function TourOverlay({ stepConfig, step, totalSteps, onNext, onSkip, lang }) {
             </div>
             <div style={{ fontSize: '.9rem', color: '#cbd5e1', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
               {text[lang] || text.en}
+            </div>
+            {/* Language selector inside welcome modal */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16, marginBottom: 4 }}>
+              <button onClick={() => onLangChange && onLangChange('es')} style={{
+                padding: '6px 16px', borderRadius: 6, border: lang === 'es' ? '2px solid #6366f1' : '1px solid #475569',
+                background: lang === 'es' ? '#6366f120' : 'transparent', color: lang === 'es' ? '#a5b4fc' : '#64748b',
+                cursor: 'pointer', fontSize: '.85rem', fontWeight: lang === 'es' ? 700 : 400,
+              }}>Español</button>
+              <button onClick={() => onLangChange && onLangChange('en')} style={{
+                padding: '6px 16px', borderRadius: 6, border: lang === 'en' ? '2px solid #6366f1' : '1px solid #475569',
+                background: lang === 'en' ? '#6366f120' : 'transparent', color: lang === 'en' ? '#a5b4fc' : '#64748b',
+                cursor: 'pointer', fontSize: '.85rem', fontWeight: lang === 'en' ? 700 : 400,
+              }}>English</button>
             </div>
             <button onClick={onNext} style={{
               marginTop: 20, padding: '12px 28px', borderRadius: 8, border: 'none',
@@ -770,6 +783,7 @@ export default function App() {
           onNext={handleTourNext}
           onSkip={skipTour}
           lang={lang}
+          onLangChange={setLang}
         />
       )}
 
