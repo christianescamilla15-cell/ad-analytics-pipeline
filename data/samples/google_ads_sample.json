@@ -1,0 +1,60 @@
+{
+  "customer_id": "123-456-7890",
+  "customer_name": "MindScrolling LLC",
+  "date_range": "2024-03-01 to 2024-03-31",
+  "campaigns": [
+    {
+      "id": "gcamp_001",
+      "name": "Search - Personal Injury Attorney",
+      "status": "ENABLED",
+      "type": "SEARCH",
+      "budget_daily": 500.00,
+      "spend": 12450.00,
+      "impressions": 89000,
+      "clicks": 6230,
+      "ctr": 7.0,
+      "cpc": 2.00,
+      "conversions": 312,
+      "cost_per_conversion": 39.90,
+      "quality_score": 8,
+      "impression_share": 0.72,
+      "top_keywords": [
+        {"keyword": "personal injury attorney", "clicks": 2100, "cpc": 3.45, "conversions": 105},
+        {"keyword": "car accident lawyer", "clicks": 1890, "cpc": 2.90, "conversions": 95},
+        {"keyword": "injury lawyer near me", "clicks": 1450, "cpc": 1.85, "conversions": 72}
+      ]
+    },
+    {
+      "id": "gcamp_002",
+      "name": "Display - Brand Remarketing",
+      "status": "ENABLED",
+      "type": "DISPLAY",
+      "budget_daily": 200.00,
+      "spend": 4890.50,
+      "impressions": 456000,
+      "clicks": 9120,
+      "ctr": 2.0,
+      "cpc": 0.54,
+      "conversions": 178,
+      "cost_per_conversion": 27.47,
+      "quality_score": 7,
+      "impression_share": 0.45
+    },
+    {
+      "id": "gcamp_003",
+      "name": "Performance Max - All Channels",
+      "status": "ENABLED",
+      "type": "PERFORMANCE_MAX",
+      "budget_daily": 350.00,
+      "spend": 8920.75,
+      "impressions": 312000,
+      "clicks": 8424,
+      "ctr": 2.7,
+      "cpc": 1.06,
+      "conversions": 267,
+      "cost_per_conversion": 33.41,
+      "quality_score": 0,
+      "impression_share": 0.58
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+ADVERTISING INVOICE
+
+Invoice #INV-2024-0042
+Date: 03/15/2024
+
+Bill To: MindScrolling LLC
+         123 Main Street
+         Austin, TX 78701
+
+From: Meta Platforms Advertising
+      1 Hacker Way
+      Menlo Park, CA 94025
+
+Campaign Summary - March 2024
+==================================
+
+1  Brand Awareness Campaign - March     $3,245.50
+2  Lead Gen Campaign - Q1               $7,890.25
+3  Retargeting Display Ads              $2,100.00
+
+==================================
+Subtotal: $13,235.75
+Tax: $1,058.86
+Total: $14,294.61
+
+Payment Terms: Net 30
+Due Date: 04/14/2024
+
+Thank you for your business!
