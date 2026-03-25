@@ -71,53 +71,71 @@ const T = {
 /* ------------------------------------------------------------------ */
 const TOUR_STEPS = [
   {
-    target: 'kpi-section',
-    title: { en: 'Welcome to Ad Analytics', es: 'Bienvenido a Ad Analytics' },
+    target: 'welcome',
+    type: 'modal',
+    title: { en: 'Ad Analytics Pipeline', es: 'Pipeline de Analytics Publicitario' },
     text: {
-      en: 'This dashboard unifies Meta Ads, Google Ads, and GA4 data. These KPI cards show your key metrics. Click any KPI card to continue.',
-      es: 'Este dashboard unifica datos de Meta Ads, Google Ads y GA4. Las tarjetas KPI muestran tus metricas clave. Haz clic en cualquier tarjeta KPI para continuar.'
+      en: 'This platform unifies your advertising data from Meta Ads, Google Ads, and Google Analytics into a single dashboard. It automatically detects spending anomalies, parses invoices with OCR, and runs ETL pipelines to keep your data fresh.\n\nLet me give you a guided tour!',
+      es: 'Esta plataforma unifica tus datos publicitarios de Meta Ads, Google Ads y Google Analytics en un solo dashboard. Detecta anomalias de gasto automaticamente, parsea facturas con OCR, y ejecuta pipelines ETL para mantener tus datos actualizados.\n\n¡Dejame darte un tour guiado!'
     },
-    action: 'click-kpi',
+    btnText: { en: 'Start Tour →', es: 'Iniciar Tour →' },
+    position: 'center',
+  },
+  {
+    target: 'kpi-section',
+    type: 'tooltip',
+    title: { en: 'Key Performance Indicators', es: 'Indicadores Clave' },
+    text: {
+      en: 'These 4 cards show your unified metrics across all platforms: total ad spend, conversions, blended CPC, and website sessions from GA4.',
+      es: 'Estas 4 tarjetas muestran tus metricas unificadas de todas las plataformas: gasto total, conversiones, CPC combinado, y sesiones web de GA4.'
+    },
+    btnText: { en: 'Next →', es: 'Siguiente →' },
     position: 'bottom',
   },
   {
     target: 'campaigns-section',
-    title: { en: 'Campaign Performance', es: 'Rendimiento de Campanas' },
+    type: 'tooltip',
+    title: { en: 'Unified Campaign Table', es: 'Tabla Unificada de Campanas' },
     text: {
-      en: 'All campaigns from both platforms are unified here. Click on any campaign row to see its details.',
-      es: 'Todas las campanas de ambas plataformas estan unificadas aqui. Haz clic en cualquier fila de campana para ver sus detalles.'
+      en: 'All campaigns from Meta and Google are shown together. You can compare spend, CTR, CPC, and conversions across platforms in one view.',
+      es: 'Todas las campanas de Meta y Google se muestran juntas. Puedes comparar gasto, CTR, CPC y conversiones entre plataformas en una sola vista.'
     },
-    action: 'click-campaign',
+    btnText: { en: 'Next →', es: 'Siguiente →' },
     position: 'top',
   },
   {
     target: 'ocr-section',
+    type: 'action',
     title: { en: 'OCR Invoice Parser', es: 'Parser OCR de Facturas' },
     text: {
-      en: 'Paste any advertising invoice and the OCR parser extracts line items and totals. Type something in the box, then click Parse.',
-      es: 'Pega cualquier factura publicitaria y el parser OCR extrae lineas y totales. Escribe algo en el campo, luego haz clic en Parse.'
+      en: 'The OCR engine extracts line items, vendor info, and totals from advertising invoices automatically. Click the button below to try it with a sample invoice!',
+      es: 'El motor OCR extrae lineas, info del proveedor y totales de facturas publicitarias automaticamente. ¡Haz clic en el boton de abajo para probarlo con una factura de ejemplo!'
     },
-    action: 'click-parse',
+    btnText: { en: 'Try OCR →', es: 'Probar OCR →' },
+    autoAction: 'parse',
     position: 'top',
   },
   {
     target: 'etl-section',
+    type: 'action',
     title: { en: 'ETL Pipeline', es: 'Pipeline ETL' },
     text: {
-      en: 'The ETL pipeline syncs data from all 3 platforms. Click Run Pipeline to see it in action.',
-      es: 'El pipeline ETL sincroniza datos de las 3 plataformas. Haz clic en Run Pipeline para verlo en accion.'
+      en: 'The ETL pipeline extracts data from Meta, Google, and GA4, transforms it into a unified format, and loads it into the analytics engine. Click below to run it!',
+      es: 'El pipeline ETL extrae datos de Meta, Google y GA4, los transforma a un formato unificado, y los carga en el motor de analitica. ¡Haz clic abajo para ejecutarlo!'
     },
-    action: 'click-etl',
+    btnText: { en: 'Run Pipeline →', es: 'Ejecutar Pipeline →' },
+    autoAction: 'etl',
     position: 'top',
   },
   {
     target: 'anomalies-section',
+    type: 'tooltip',
     title: { en: 'Anomaly Detection', es: 'Deteccion de Anomalias' },
     text: {
-      en: 'Campaigns with unusual spending are flagged automatically using z-score analysis. Tour complete! You\'ve explored the full pipeline.',
-      es: 'Las campanas con gastos inusuales se marcan automaticamente usando analisis z-score. Tour completo! Has explorado todo el pipeline.'
+      en: 'Campaigns with unusual spending patterns are flagged automatically using z-score statistical analysis. Any campaign spending more than 2 standard deviations from the mean gets an alert.',
+      es: 'Las campanas con patrones de gasto inusuales se marcan automaticamente usando analisis estadistico z-score. Cualquier campana que gaste mas de 2 desviaciones estandar del promedio recibe una alerta.'
     },
-    action: 'finish',
+    btnText: { en: 'Finish Tour ✓', es: 'Finalizar Tour ✓' },
     position: 'top',
   },
 ]
@@ -195,13 +213,17 @@ const S = {
 /* ------------------------------------------------------------------ */
 /*  TourOverlay Component                                              */
 /* ------------------------------------------------------------------ */
-function TourOverlay({ step, totalSteps, title, text, position, targetSelector, onSkip, onFinish, isLast, lang }) {
+function TourOverlay({ stepConfig, step, totalSteps, onNext, onSkip, lang }) {
   const [tooltipStyle, setTooltipStyle] = useState({})
   const [highlightStyle, setHighlightStyle] = useState({})
   const [arrowStyle, setArrowStyle] = useState({})
 
+  const { type, target, title, text, btnText, position } = stepConfig
+
   useEffect(() => {
-    const el = document.querySelector(`[data-tour="${targetSelector}"]`)
+    if (type === 'modal') return // modal doesn't need positioning
+
+    const el = document.querySelector(`[data-tour="${target}"]`)
     if (!el) return
 
     const rect = el.getBoundingClientRect()
@@ -221,13 +243,11 @@ function TourOverlay({ step, totalSteps, title, text, position, targetSelector, 
     })
 
     const tooltipW = 380
-    let top, left, arrowTop, arrowLeft, arrowBorder
+    let top, left, arrowBorder
 
     if (position === 'bottom') {
       top = rect.bottom + pad + 16
       left = rect.left + rect.width / 2 - tooltipW / 2
-      arrowTop = -8
-      arrowLeft = tooltipW / 2 - 8
       arrowBorder = { borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: '8px solid #1e293b' }
     } else {
       top = rect.top - pad - 16
@@ -240,11 +260,9 @@ function TourOverlay({ step, totalSteps, title, text, position, targetSelector, 
     if (left + tooltipW > window.innerWidth - 16) left = window.innerWidth - tooltipW - 16
 
     if (position === 'top') {
-      // We need to measure tooltip height; approximate
-      const approxH = 180
+      const approxH = 220
       top = rect.top - pad - 16 - approxH
-      if (top < 10) top = rect.bottom + pad + 16 // flip to bottom if no room
-      arrowTop = undefined
+      if (top < 10) top = rect.bottom + pad + 16
     }
 
     setTooltipStyle({
@@ -264,51 +282,73 @@ function TourOverlay({ step, totalSteps, title, text, position, targetSelector, 
       ...arrowBorder,
     })
 
-    // Scroll target into view
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [targetSelector, position])
+  }, [target, position, type])
+
+  // --- MODAL type (welcome screen) ---
+  if (type === 'modal') {
+    return (
+      <>
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+          zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: '#1e293b', border: '1px solid #334155', borderRadius: 16,
+            padding: '32px 36px', color: '#e2e8f0', maxWidth: 480, width: '90%',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)', animation: 'tourFadeIn 0.3s ease',
+          }}>
+            <div style={{ fontSize: '.72rem', color: '#64748b', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{lang === 'en' ? `Step ${step + 1} of ${totalSteps}` : `Paso ${step + 1} de ${totalSteps}`}</span>
+              <button onClick={onSkip} style={{ background: 'transparent', border: '1px solid #475569', color: '#94a3b8', padding: '3px 10px', borderRadius: 6, cursor: 'pointer', fontSize: '.72rem' }}>
+                {lang === 'en' ? 'Skip Tour' : 'Saltar Tour'}
+              </button>
+            </div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 700, color: '#f1f5f9', marginBottom: 12 }}>
+              {title[lang] || title.en}
+            </div>
+            <div style={{ fontSize: '.9rem', color: '#cbd5e1', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+              {text[lang] || text.en}
+            </div>
+            <button onClick={onNext} style={{
+              marginTop: 20, padding: '12px 28px', borderRadius: 8, border: 'none',
+              background: '#6366f1', color: '#fff', fontWeight: 600, cursor: 'pointer',
+              fontSize: '.95rem', width: '100%',
+            }}>
+              {btnText[lang] || btnText.en}
+            </button>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // --- TOOLTIP and ACTION types ---
+  const isLast = step === totalSteps - 1
 
   return (
     <>
       {/* Dark backdrop */}
       <div style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.7)',
-        zIndex: 9000,
-        pointerEvents: 'auto',
-      }} onClick={onSkip} />
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+        zIndex: 9000, pointerEvents: 'auto',
+      }} />
 
       {/* Highlight ring */}
       <div style={highlightStyle} />
 
       {/* Tooltip card */}
       <div style={{
-        ...tooltipStyle,
-        background: '#1e293b',
-        border: '1px solid #334155',
-        borderRadius: 12,
-        padding: '20px',
-        color: '#e2e8f0',
+        ...tooltipStyle, background: '#1e293b', border: '1px solid #334155',
+        borderRadius: 12, padding: '20px', color: '#e2e8f0',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
         <div style={arrowStyle} />
 
-        {/* Step counter */}
+        {/* Step counter + skip */}
         <div style={{ fontSize: '.72rem', color: '#64748b', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>{lang === 'en' ? `Step ${step + 1} of ${totalSteps}` : `Paso ${step + 1} de ${totalSteps}`}</span>
-          <button
-            onClick={onSkip}
-            style={{
-              background: 'transparent',
-              border: '1px solid #475569',
-              color: '#94a3b8',
-              padding: '3px 10px',
-              borderRadius: 6,
-              cursor: 'pointer',
-              fontSize: '.72rem',
-            }}
-          >
+          <button onClick={onSkip} style={{ background: 'transparent', border: '1px solid #475569', color: '#94a3b8', padding: '3px 10px', borderRadius: 6, cursor: 'pointer', fontSize: '.72rem' }}>
             {lang === 'en' ? 'Skip Tour' : 'Saltar Tour'}
           </button>
         </div>
@@ -323,26 +363,14 @@ function TourOverlay({ step, totalSteps, title, text, position, targetSelector, 
           {text[lang] || text.en}
         </div>
 
-        {/* Finish button on last step */}
-        {isLast && (
-          <button
-            onClick={onFinish}
-            style={{
-              marginTop: 16,
-              padding: '10px 24px',
-              borderRadius: 8,
-              border: 'none',
-              background: '#22c55e',
-              color: '#fff',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '.85rem',
-              width: '100%',
-            }}
-          >
-            {lang === 'en' ? 'Finish Tour' : 'Finalizar Tour'}
-          </button>
-        )}
+        {/* Action / Next / Finish button */}
+        <button onClick={onNext} style={{
+          marginTop: 16, padding: '10px 24px', borderRadius: 8, border: 'none',
+          background: isLast ? '#22c55e' : type === 'action' ? '#8b5cf6' : '#6366f1',
+          color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', width: '100%',
+        }}>
+          {btnText[lang] || btnText.en}
+        </button>
       </div>
     </>
   )
@@ -422,55 +450,27 @@ export default function App() {
   const [etlResult, setEtlResult] = useState(null)
 
   // Tour state
-  const [tourStep, setTourStep] = useState(() => {
-    return localStorage.getItem('tour_done_ad_analytics') ? -1 : 0
-  })
-  const [tourActive, setTourActive] = useState(() => {
-    return !localStorage.getItem('tour_done_ad_analytics')
-  })
+  const [tourStep, setTourStep] = useState(0)
+  const [tourActive, setTourActive] = useState(true)
 
   const allCampaigns = [...MOCK.metaCampaigns, ...MOCK.googleCampaigns]
 
   const skipTour = useCallback(() => {
     setTourActive(false)
     setTourStep(-1)
-    localStorage.setItem('tour_done_ad_analytics', 'true')
-  }, [])
-
-  const finishTour = useCallback(() => {
-    setTourActive(false)
-    setTourStep(-1)
-    localStorage.setItem('tour_done_ad_analytics', 'true')
   }, [])
 
   const restartTour = useCallback(() => {
-    localStorage.removeItem('tour_done_ad_analytics')
     setTourStep(0)
     setTourActive(true)
   }, [])
 
-  // KPI click handler
-  const handleKpiClick = useCallback(() => {
-    if (tourActive && tourStep === 0) {
-      setTourStep(1)
-    }
-  }, [tourActive, tourStep])
-
-  // Campaign row click handler
-  const handleCampaignClick = useCallback((campaign) => {
-    if (tourActive && tourStep === 1) {
-      setTourStep(2)
-    }
-  }, [tourActive, tourStep])
-
   const handleParse = useCallback(() => {
     let textToParse = invoiceText
-    // If tour active on OCR step and textarea empty, auto-fill sample
-    if (tourActive && tourStep === 2 && !invoiceText.trim()) {
+    if(!textToParse.trim()) {
       setInvoiceText(SAMPLE_INVOICE)
       textToParse = SAMPLE_INVOICE
     }
-    if(!textToParse.trim()) return
     // Client-side regex parse (mirrors backend InvoiceParser)
     const inv = textToParse.match(/(?:Invoice|Inv|#)\s*[:#]?\s*(\w+[-/]?\w+)/i)
     const dt = textToParse.match(/(?:Date|Fecha)[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i)
@@ -488,10 +488,7 @@ export default function App() {
       total: tot?parseFloat(tot[1].replace(/,/g,'')):0,
       line_items: items.map(m=>({qty:parseInt(m[1]),description:m[2].trim(),amount:parseFloat(m[3].replace(/,/g,''))})),
     })
-    if (tourActive && tourStep === 2) {
-      setTimeout(() => setTourStep(3), 500)
-    }
-  }, [invoiceText, tourActive, tourStep])
+  }, [invoiceText])
 
   const handleETL = useCallback(() => {
     setEtlStatus('running')
@@ -499,10 +496,79 @@ export default function App() {
       setEtlResult({status:'completed',records:7,sources:['meta','google','ga4'],elapsed:'0.042s'})
       setEtlStatus('completed')
     }, 1500)
-    if (tourActive && tourStep === 3) {
-      setTimeout(() => setTourStep(4), 1800)
+  }, [])
+
+  const handleFileUpload = useCallback((e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    if (file.type === 'text/plain') {
+      reader.onload = (ev) => setInvoiceText(ev.target.result)
+      reader.readAsText(file)
+    } else if (file.type.startsWith('image/')) {
+      setInvoiceText(`[${lang === 'en' ? 'Image uploaded' : 'Imagen subida'}: ${file.name}]\n\n${lang === 'en' ? 'In production, this image would be processed by AWS Textract OCR.\nFor this demo, paste the invoice text manually or use the sample.' : 'En produccion, esta imagen seria procesada por AWS Textract OCR.\nPara esta demo, pega el texto de la factura manualmente o usa el ejemplo.'}`)
+    } else if (file.name.endsWith('.pdf')) {
+      setInvoiceText(`[${lang === 'en' ? 'PDF uploaded' : 'PDF subido'}: ${file.name}]\n\n${lang === 'en' ? 'In production, this PDF would be processed by AWS Textract OCR.\nFor this demo, paste the invoice text manually or use the sample.' : 'En produccion, este PDF seria procesado por AWS Textract OCR.\nPara esta demo, pega el texto de la factura manualmente o usa el ejemplo.'}`)
     }
-  }, [tourActive, tourStep])
+  }, [lang])
+
+  // Tour "Next" handler — handles scroll + actions
+  const handleTourNext = useCallback(() => {
+    const currentStep = TOUR_STEPS[tourStep]
+    const nextStepIdx = tourStep + 1
+
+    // If action step, trigger the action
+    if (currentStep?.autoAction === 'parse') {
+      // Auto-fill sample and parse
+      setInvoiceText(SAMPLE_INVOICE)
+      setTimeout(() => {
+        // Trigger parse with sample
+        const textToParse = SAMPLE_INVOICE
+        const inv = textToParse.match(/(?:Invoice|Inv|#)\s*[:#]?\s*(\w+[-/]?\w+)/i)
+        const dt = textToParse.match(/(?:Date|Fecha)[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i)
+        const tot = textToParse.match(/(?:Total|Amount Due|Grand Total)[:\s]*\$?([\d,]+\.?\d*)/i)
+        const sub = textToParse.match(/(?:Subtotal|Sub-total)[:\s]*\$?([\d,]+\.?\d*)/i)
+        const tax = textToParse.match(/(?:Tax|IVA|VAT)[:\s]*\$?([\d,]+\.?\d*)/i)
+        const vendor = textToParse.match(/(?:From|Bill From|Vendor)[:\s]*([A-Za-z\s&.,]+)/i)
+        const items = [...textToParse.matchAll(/(\d+)\s+(.+?)\s+\$?([\d,]+\.?\d*)/g)]
+        setParsed({
+          invoice_number: inv?inv[1]:'',
+          date: dt?dt[1]:'',
+          vendor_name: vendor?vendor[1].trim():'',
+          subtotal: sub?parseFloat(sub[1].replace(/,/g,'')):0,
+          tax: tax?parseFloat(tax[1].replace(/,/g,'')):0,
+          total: tot?parseFloat(tot[1].replace(/,/g,'')):0,
+          line_items: items.map(m=>({qty:parseInt(m[1]),description:m[2].trim(),amount:parseFloat(m[3].replace(/,/g,''))})),
+        })
+      }, 100)
+    }
+
+    if (currentStep?.autoAction === 'etl') {
+      setEtlStatus('running')
+      setTimeout(()=>{
+        setEtlResult({status:'completed',records:7,sources:['meta','google','ga4'],elapsed:'0.042s'})
+        setEtlStatus('completed')
+      }, 1500)
+    }
+
+    // Advance or finish
+    if (nextStepIdx >= TOUR_STEPS.length) {
+      setTourActive(false)
+      setTourStep(-1)
+      return
+    }
+
+    setTourStep(nextStepIdx)
+
+    // Auto-scroll next target into view
+    const nextTarget = TOUR_STEPS[nextStepIdx]?.target
+    if (nextTarget && nextTarget !== 'welcome') {
+      setTimeout(() => {
+        const el = document.querySelector(`[data-tour="${nextTarget}"]`)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    }
+  }, [tourStep])
 
   // Determine which sections get elevated z-index during tour
   const tourTargetZStyle = (sectionName) => {
@@ -552,10 +618,10 @@ export default function App() {
       <div style={{...S.grid,gap:24}}>
         {/* KPIs */}
         <div data-tour="kpi-section" style={{...S.kpiRow, ...tourTargetZStyle('kpi-section')}}>
-          <KPICard label={t.totalSpend} value={MOCK.kpis.total_spend} prefix="$" onClick={handleKpiClick} />
-          <KPICard label={t.conversions} value={MOCK.kpis.total_conversions} onClick={handleKpiClick} />
-          <KPICard label={t.blendedCpc} value={MOCK.kpis.blended_cpc} prefix="$" onClick={handleKpiClick} />
-          <KPICard label={t.sessions} value={MOCK.kpis.website_sessions} onClick={handleKpiClick} />
+          <KPICard label={t.totalSpend} value={MOCK.kpis.total_spend} prefix="$" />
+          <KPICard label={t.conversions} value={MOCK.kpis.total_conversions} />
+          <KPICard label={t.blendedCpc} value={MOCK.kpis.blended_cpc} prefix="$" />
+          <KPICard label={t.sessions} value={MOCK.kpis.website_sessions} />
         </div>
 
         {/* Charts row */}
@@ -585,7 +651,6 @@ export default function App() {
               <tbody>
                 {allCampaigns.sort((a,b)=>b.spend-a.spend).map(c=>(
                   <tr key={c.id} style={{transition:'background .2s', cursor: 'pointer'}}
-                      onClick={() => handleCampaignClick(c)}
                       onMouseOver={e=>e.currentTarget.style.background='#1e293b44'}
                       onMouseOut={e=>e.currentTarget.style.background='transparent'}>
                     <td style={S.td}>{c.name}</td>
@@ -609,6 +674,22 @@ export default function App() {
           {/* OCR */}
           <div data-tour="ocr-section" style={{...S.card, ...tourTargetZStyle('ocr-section')}}>
             <div style={S.sectionTitle}>{t.ocrUpload}</div>
+            <div style={{display:'flex',gap:12,marginBottom:12}}>
+              <label style={{
+                flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                padding:'16px', border:'2px dashed #334155', borderRadius:8, cursor:'pointer',
+                color:'#64748b', fontSize:'.85rem', transition:'all 0.2s',
+              }}>
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16"/>
+                </svg>
+                {lang === 'en' ? 'Upload file (PDF, JPG, PNG, TXT)' : 'Subir archivo (PDF, JPG, PNG, TXT)'}
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png,.txt" style={{display:'none'}} onChange={handleFileUpload} />
+              </label>
+              <button onClick={() => setInvoiceText(SAMPLE_INVOICE)} style={{...S.btn, background:'#334155', color:'#e2e8f0', flex:'0 0 auto'}}>
+                {lang === 'en' ? '\u{1F4C4} Load Sample' : '\u{1F4C4} Cargar Ejemplo'}
+              </button>
+            </div>
             <textarea style={S.textarea} placeholder={t.ocrPlaceholder} value={invoiceText} onChange={e=>setInvoiceText(e.target.value)} />
             <button style={{...S.btn,background:'#3b82f6',color:'#fff',marginTop:10,width:'100%'}} onClick={handleParse}>{t.parse}</button>
             {parsed && (
@@ -683,15 +764,11 @@ export default function App() {
       {/* Tour Overlay */}
       {tourActive && tourStep >= 0 && tourStep < TOUR_STEPS.length && (
         <TourOverlay
+          stepConfig={TOUR_STEPS[tourStep]}
           step={tourStep}
           totalSteps={TOUR_STEPS.length}
-          title={TOUR_STEPS[tourStep].title}
-          text={TOUR_STEPS[tourStep].text}
-          position={TOUR_STEPS[tourStep].position}
-          targetSelector={TOUR_STEPS[tourStep].target}
+          onNext={handleTourNext}
           onSkip={skipTour}
-          onFinish={finishTour}
-          isLast={tourStep === TOUR_STEPS.length - 1}
           lang={lang}
         />
       )}
