@@ -26,7 +26,7 @@ class InvoiceParser:
     PATTERNS = {
         "invoice_number": r"(?:Invoice|Inv|#)\s*[:#]?\s*(\w+[-/]?\w+)",
         "date": r"(?:Date|Fecha)[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
-        "total": r"(?:Grand Total|Amount Due|^Total)[:\s]*\$?([\d,]+\.?\d*)",
+        "total": r"(?:Grand Total|Amount Due|Total)[:\s]*\$?([\d,]+\.?\d*)",
         "subtotal": r"(?:Subtotal|Sub-total)[:\s]*\$?([\d,]+\.?\d*)",
         "tax": r"(?:Tax|IVA|VAT)[:\s]*\$?([\d,]+\.?\d*)",
         "vendor": r"(?:From|Bill From|Vendor)[:\s]*([A-Za-z\s&.,]+)",
