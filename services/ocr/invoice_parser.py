@@ -26,7 +26,7 @@ class InvoiceParser:
     PATTERNS = {
         "invoice_number": r"(?:Invoice|Inv|#)\s*[:#]?\s*(\w+[-/]?\w+)",
         "date": r"(?:Date|Fecha)[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",
-        "total": r"(?:Total|Amount Due|Grand Total)[:\s]*\$?([\d,]+\.?\d*)",
+        "total": r"(?:Grand Total|Amount Due|^Total)[:\s]*\$?([\d,]+\.?\d*)",
         "subtotal": r"(?:Subtotal|Sub-total)[:\s]*\$?([\d,]+\.?\d*)",
         "tax": r"(?:Tax|IVA|VAT)[:\s]*\$?([\d,]+\.?\d*)",
         "vendor": r"(?:From|Bill From|Vendor)[:\s]*([A-Za-z\s&.,]+)",
@@ -45,9 +45,9 @@ class InvoiceParser:
                 data[field_name] = value
                 matches += 1
 
-        # Extract line items
-        item_pattern = r"(\d+)\s+(.+?)\s+\$?([\d,]+\.?\d*)"
-        items = re.findall(item_pattern, text)
+        # Extract line items (must start at beginning of line with small qty number)
+        item_pattern = r"^(\d{1,3})\s+([A-Za-z][\w\s\-]+?)\s+\$?([\d,]+\.\d{2})$"
+        items = re.findall(item_pattern, text, re.MULTILINE)
         data["line_items"] = [
             {
                 "qty": int(q),
