@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 
 /* ------------------------------------------------------------------ */
 /*  i18n                                                               */
@@ -67,6 +67,74 @@ const T = {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Tour Steps Config                                                  */
+/* ------------------------------------------------------------------ */
+const TOUR_STEPS = [
+  {
+    target: 'kpi-section',
+    title: { en: 'Welcome to Ad Analytics', es: 'Bienvenido a Ad Analytics' },
+    text: {
+      en: 'This dashboard unifies Meta Ads, Google Ads, and GA4 data. These KPI cards show your key metrics. Click any KPI card to continue.',
+      es: 'Este dashboard unifica datos de Meta Ads, Google Ads y GA4. Las tarjetas KPI muestran tus metricas clave. Haz clic en cualquier tarjeta KPI para continuar.'
+    },
+    action: 'click-kpi',
+    position: 'bottom',
+  },
+  {
+    target: 'campaigns-section',
+    title: { en: 'Campaign Performance', es: 'Rendimiento de Campanas' },
+    text: {
+      en: 'All campaigns from both platforms are unified here. Click on any campaign row to see its details.',
+      es: 'Todas las campanas de ambas plataformas estan unificadas aqui. Haz clic en cualquier fila de campana para ver sus detalles.'
+    },
+    action: 'click-campaign',
+    position: 'top',
+  },
+  {
+    target: 'ocr-section',
+    title: { en: 'OCR Invoice Parser', es: 'Parser OCR de Facturas' },
+    text: {
+      en: 'Paste any advertising invoice and the OCR parser extracts line items and totals. Type something in the box, then click Parse.',
+      es: 'Pega cualquier factura publicitaria y el parser OCR extrae lineas y totales. Escribe algo en el campo, luego haz clic en Parse.'
+    },
+    action: 'click-parse',
+    position: 'top',
+  },
+  {
+    target: 'etl-section',
+    title: { en: 'ETL Pipeline', es: 'Pipeline ETL' },
+    text: {
+      en: 'The ETL pipeline syncs data from all 3 platforms. Click Run Pipeline to see it in action.',
+      es: 'El pipeline ETL sincroniza datos de las 3 plataformas. Haz clic en Run Pipeline para verlo en accion.'
+    },
+    action: 'click-etl',
+    position: 'top',
+  },
+  {
+    target: 'anomalies-section',
+    title: { en: 'Anomaly Detection', es: 'Deteccion de Anomalias' },
+    text: {
+      en: 'Campaigns with unusual spending are flagged automatically using z-score analysis. Tour complete! You\'ve explored the full pipeline.',
+      es: 'Las campanas con gastos inusuales se marcan automaticamente usando analisis z-score. Tour completo! Has explorado todo el pipeline.'
+    },
+    action: 'finish',
+    position: 'top',
+  },
+]
+
+const SAMPLE_INVOICE = `Invoice #INV-2024-0381
+Date: 03/15/2024
+From: Meta Platforms Inc.
+
+2 Brand Awareness Campaign $3,245.50
+1 Lead Generation Campaign $7,890.25
+1 Retargeting Campaign $2,100.00
+
+Subtotal: $13,235.75
+Tax: $1,058.86
+Total: $14,294.61`
+
+/* ------------------------------------------------------------------ */
 /*  Mock Data (embedded — no API calls needed for demo)                */
 /* ------------------------------------------------------------------ */
 const MOCK = {
@@ -125,11 +193,167 @@ const S = {
 }
 
 /* ------------------------------------------------------------------ */
+/*  TourOverlay Component                                              */
+/* ------------------------------------------------------------------ */
+function TourOverlay({ step, totalSteps, title, text, position, targetSelector, onSkip, onFinish, isLast, lang }) {
+  const [tooltipStyle, setTooltipStyle] = useState({})
+  const [highlightStyle, setHighlightStyle] = useState({})
+  const [arrowStyle, setArrowStyle] = useState({})
+
+  useEffect(() => {
+    const el = document.querySelector(`[data-tour="${targetSelector}"]`)
+    if (!el) return
+
+    const rect = el.getBoundingClientRect()
+    const pad = 8
+
+    setHighlightStyle({
+      position: 'fixed',
+      top: rect.top - pad,
+      left: rect.left - pad,
+      width: rect.width + pad * 2,
+      height: rect.height + pad * 2,
+      borderRadius: 12,
+      zIndex: 9002,
+      pointerEvents: 'none',
+      animation: 'tourPulse 2s infinite',
+      boxSizing: 'border-box',
+    })
+
+    const tooltipW = 380
+    let top, left, arrowTop, arrowLeft, arrowBorder
+
+    if (position === 'bottom') {
+      top = rect.bottom + pad + 16
+      left = rect.left + rect.width / 2 - tooltipW / 2
+      arrowTop = -8
+      arrowLeft = tooltipW / 2 - 8
+      arrowBorder = { borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: '8px solid #1e293b' }
+    } else {
+      top = rect.top - pad - 16
+      left = rect.left + rect.width / 2 - tooltipW / 2
+      arrowBorder = { borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '8px solid #1e293b' }
+    }
+
+    // Clamp horizontal
+    if (left < 16) left = 16
+    if (left + tooltipW > window.innerWidth - 16) left = window.innerWidth - tooltipW - 16
+
+    if (position === 'top') {
+      // We need to measure tooltip height; approximate
+      const approxH = 180
+      top = rect.top - pad - 16 - approxH
+      if (top < 10) top = rect.bottom + pad + 16 // flip to bottom if no room
+      arrowTop = undefined
+    }
+
+    setTooltipStyle({
+      position: 'fixed',
+      top,
+      left,
+      width: tooltipW,
+      zIndex: 9003,
+      animation: 'tourFadeIn 0.3s ease',
+    })
+
+    setArrowStyle({
+      position: 'absolute',
+      ...(position === 'bottom' ? { top: -8, left: tooltipW / 2 - 8 } : { bottom: -8, left: tooltipW / 2 - 8 }),
+      width: 0,
+      height: 0,
+      ...arrowBorder,
+    })
+
+    // Scroll target into view
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [targetSelector, position])
+
+  return (
+    <>
+      {/* Dark backdrop */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.7)',
+        zIndex: 9000,
+        pointerEvents: 'auto',
+      }} onClick={onSkip} />
+
+      {/* Highlight ring */}
+      <div style={highlightStyle} />
+
+      {/* Tooltip card */}
+      <div style={{
+        ...tooltipStyle,
+        background: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: 12,
+        padding: '20px',
+        color: '#e2e8f0',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+      }}>
+        <div style={arrowStyle} />
+
+        {/* Step counter */}
+        <div style={{ fontSize: '.72rem', color: '#64748b', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{lang === 'en' ? `Step ${step + 1} of ${totalSteps}` : `Paso ${step + 1} de ${totalSteps}`}</span>
+          <button
+            onClick={onSkip}
+            style={{
+              background: 'transparent',
+              border: '1px solid #475569',
+              color: '#94a3b8',
+              padding: '3px 10px',
+              borderRadius: 6,
+              cursor: 'pointer',
+              fontSize: '.72rem',
+            }}
+          >
+            {lang === 'en' ? 'Skip Tour' : 'Saltar Tour'}
+          </button>
+        </div>
+
+        {/* Title */}
+        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>
+          {title[lang] || title.en}
+        </div>
+
+        {/* Text */}
+        <div style={{ fontSize: '.85rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+          {text[lang] || text.en}
+        </div>
+
+        {/* Finish button on last step */}
+        {isLast && (
+          <button
+            onClick={onFinish}
+            style={{
+              marginTop: 16,
+              padding: '10px 24px',
+              borderRadius: 8,
+              border: 'none',
+              background: '#22c55e',
+              color: '#fff',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '.85rem',
+              width: '100%',
+            }}
+          >
+            {lang === 'en' ? 'Finish Tour' : 'Finalizar Tour'}
+          </button>
+        )}
+      </div>
+    </>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Components                                                         */
 /* ------------------------------------------------------------------ */
-function KPICard({ label, value, prefix='', suffix='' }) {
+function KPICard({ label, value, prefix='', suffix='', onClick }) {
   return (
-    <div style={S.card}>
+    <div style={{...S.card, cursor: onClick ? 'pointer' : 'default'}} onClick={onClick}>
       <div style={S.kpiLabel}>{label}</div>
       <div style={S.kpiValue}>{prefix}{typeof value==='number'?value.toLocaleString():value}{suffix}</div>
     </div>
@@ -197,18 +421,64 @@ export default function App() {
   const [etlStatus, setEtlStatus] = useState('idle')
   const [etlResult, setEtlResult] = useState(null)
 
+  // Tour state
+  const [tourStep, setTourStep] = useState(() => {
+    return localStorage.getItem('tour_done_ad_analytics') ? -1 : 0
+  })
+  const [tourActive, setTourActive] = useState(() => {
+    return !localStorage.getItem('tour_done_ad_analytics')
+  })
+
   const allCampaigns = [...MOCK.metaCampaigns, ...MOCK.googleCampaigns]
 
+  const skipTour = useCallback(() => {
+    setTourActive(false)
+    setTourStep(-1)
+    localStorage.setItem('tour_done_ad_analytics', 'true')
+  }, [])
+
+  const finishTour = useCallback(() => {
+    setTourActive(false)
+    setTourStep(-1)
+    localStorage.setItem('tour_done_ad_analytics', 'true')
+  }, [])
+
+  const restartTour = useCallback(() => {
+    localStorage.removeItem('tour_done_ad_analytics')
+    setTourStep(0)
+    setTourActive(true)
+  }, [])
+
+  // KPI click handler
+  const handleKpiClick = useCallback(() => {
+    if (tourActive && tourStep === 0) {
+      setTourStep(1)
+    }
+  }, [tourActive, tourStep])
+
+  // Campaign row click handler
+  const handleCampaignClick = useCallback((campaign) => {
+    if (tourActive && tourStep === 1) {
+      setTourStep(2)
+    }
+  }, [tourActive, tourStep])
+
   const handleParse = useCallback(() => {
-    if(!invoiceText.trim()) return
+    let textToParse = invoiceText
+    // If tour active on OCR step and textarea empty, auto-fill sample
+    if (tourActive && tourStep === 2 && !invoiceText.trim()) {
+      setInvoiceText(SAMPLE_INVOICE)
+      textToParse = SAMPLE_INVOICE
+    }
+    if(!textToParse.trim()) return
     // Client-side regex parse (mirrors backend InvoiceParser)
-    const inv = invoiceText.match(/(?:Invoice|Inv|#)\s*[:#]?\s*(\w+[-/]?\w+)/i)
-    const dt = invoiceText.match(/(?:Date|Fecha)[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i)
-    const tot = invoiceText.match(/(?:Total|Amount Due|Grand Total)[:\s]*\$?([\d,]+\.?\d*)/i)
-    const sub = invoiceText.match(/(?:Subtotal|Sub-total)[:\s]*\$?([\d,]+\.?\d*)/i)
-    const tax = invoiceText.match(/(?:Tax|IVA|VAT)[:\s]*\$?([\d,]+\.?\d*)/i)
-    const vendor = invoiceText.match(/(?:From|Bill From|Vendor)[:\s]*([A-Za-z\s&.,]+)/i)
-    const items = [...invoiceText.matchAll(/(\d+)\s+(.+?)\s+\$?([\d,]+\.?\d*)/g)]
+    const inv = textToParse.match(/(?:Invoice|Inv|#)\s*[:#]?\s*(\w+[-/]?\w+)/i)
+    const dt = textToParse.match(/(?:Date|Fecha)[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i)
+    const tot = textToParse.match(/(?:Total|Amount Due|Grand Total)[:\s]*\$?([\d,]+\.?\d*)/i)
+    const sub = textToParse.match(/(?:Subtotal|Sub-total)[:\s]*\$?([\d,]+\.?\d*)/i)
+    const tax = textToParse.match(/(?:Tax|IVA|VAT)[:\s]*\$?([\d,]+\.?\d*)/i)
+    const vendor = textToParse.match(/(?:From|Bill From|Vendor)[:\s]*([A-Za-z\s&.,]+)/i)
+    const items = [...textToParse.matchAll(/(\d+)\s+(.+?)\s+\$?([\d,]+\.?\d*)/g)]
     setParsed({
       invoice_number: inv?inv[1]:'',
       date: dt?dt[1]:'',
@@ -218,7 +488,10 @@ export default function App() {
       total: tot?parseFloat(tot[1].replace(/,/g,'')):0,
       line_items: items.map(m=>({qty:parseInt(m[1]),description:m[2].trim(),amount:parseFloat(m[3].replace(/,/g,''))})),
     })
-  }, [invoiceText])
+    if (tourActive && tourStep === 2) {
+      setTimeout(() => setTourStep(3), 500)
+    }
+  }, [invoiceText, tourActive, tourStep])
 
   const handleETL = useCallback(() => {
     setEtlStatus('running')
@@ -226,7 +499,20 @@ export default function App() {
       setEtlResult({status:'completed',records:7,sources:['meta','google','ga4'],elapsed:'0.042s'})
       setEtlStatus('completed')
     }, 1500)
-  }, [])
+    if (tourActive && tourStep === 3) {
+      setTimeout(() => setTourStep(4), 1800)
+    }
+  }, [tourActive, tourStep])
+
+  // Determine which sections get elevated z-index during tour
+  const tourTargetZStyle = (sectionName) => {
+    if (!tourActive || tourStep < 0) return {}
+    const currentTarget = TOUR_STEPS[tourStep]?.target
+    if (currentTarget === sectionName) {
+      return { position: 'relative', zIndex: 9001 }
+    }
+    return {}
+  }
 
   return (
     <div style={S.body}>
@@ -239,16 +525,37 @@ export default function App() {
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <span style={{...S.badge,background:'#22c55e22',color:'#22c55e'}}>{t.demo}</span>
           <button style={S.langBtn} onClick={()=>setLang(l=>l==='en'?'es':'en')}>{lang==='en'?'ES':'EN'}</button>
+          {/* Restart Tour button */}
+          <button
+            onClick={restartTour}
+            title={lang === 'en' ? 'Restart Tour' : 'Reiniciar Tour'}
+            style={{
+              background: 'transparent',
+              border: '1px solid #334155',
+              color: '#94a3b8',
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              cursor: 'pointer',
+              fontSize: '.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+            }}
+          >
+            ?
+          </button>
         </div>
       </header>
 
       <div style={{...S.grid,gap:24}}>
         {/* KPIs */}
-        <div style={S.kpiRow}>
-          <KPICard label={t.totalSpend} value={MOCK.kpis.total_spend} prefix="$" />
-          <KPICard label={t.conversions} value={MOCK.kpis.total_conversions} />
-          <KPICard label={t.blendedCpc} value={MOCK.kpis.blended_cpc} prefix="$" />
-          <KPICard label={t.sessions} value={MOCK.kpis.website_sessions} />
+        <div data-tour="kpi-section" style={{...S.kpiRow, ...tourTargetZStyle('kpi-section')}}>
+          <KPICard label={t.totalSpend} value={MOCK.kpis.total_spend} prefix="$" onClick={handleKpiClick} />
+          <KPICard label={t.conversions} value={MOCK.kpis.total_conversions} onClick={handleKpiClick} />
+          <KPICard label={t.blendedCpc} value={MOCK.kpis.blended_cpc} prefix="$" onClick={handleKpiClick} />
+          <KPICard label={t.sessions} value={MOCK.kpis.website_sessions} onClick={handleKpiClick} />
         </div>
 
         {/* Charts row */}
@@ -264,7 +571,7 @@ export default function App() {
         </div>
 
         {/* Campaign table */}
-        <div style={S.card}>
+        <div data-tour="campaigns-section" style={{...S.card, ...tourTargetZStyle('campaigns-section')}}>
           <div style={S.sectionTitle}>{t.campaigns}</div>
           <div style={{overflowX:'auto'}}>
             <table style={S.table}>
@@ -277,7 +584,8 @@ export default function App() {
               </thead>
               <tbody>
                 {allCampaigns.sort((a,b)=>b.spend-a.spend).map(c=>(
-                  <tr key={c.id} style={{transition:'background .2s'}}
+                  <tr key={c.id} style={{transition:'background .2s', cursor: 'pointer'}}
+                      onClick={() => handleCampaignClick(c)}
                       onMouseOver={e=>e.currentTarget.style.background='#1e293b44'}
                       onMouseOut={e=>e.currentTarget.style.background='transparent'}>
                     <td style={S.td}>{c.name}</td>
@@ -299,7 +607,7 @@ export default function App() {
         {/* Bottom row: OCR + ETL + Anomalies */}
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:20}}>
           {/* OCR */}
-          <div style={S.card}>
+          <div data-tour="ocr-section" style={{...S.card, ...tourTargetZStyle('ocr-section')}}>
             <div style={S.sectionTitle}>{t.ocrUpload}</div>
             <textarea style={S.textarea} placeholder={t.ocrPlaceholder} value={invoiceText} onChange={e=>setInvoiceText(e.target.value)} />
             <button style={{...S.btn,background:'#3b82f6',color:'#fff',marginTop:10,width:'100%'}} onClick={handleParse}>{t.parse}</button>
@@ -322,7 +630,7 @@ export default function App() {
           </div>
 
           {/* ETL */}
-          <div style={S.card}>
+          <div data-tour="etl-section" style={{...S.card, ...tourTargetZStyle('etl-section')}}>
             <div style={S.sectionTitle}>{t.etlPipeline}</div>
             <div style={{display:'flex',flexDirection:'column',gap:12,alignItems:'center',paddingTop:20}}>
               <div style={{display:'flex',gap:8,alignItems:'center'}}>
@@ -335,7 +643,7 @@ export default function App() {
                       border:`1px solid ${etlStatus==='completed'?'#22c55e44':'#334155'}`,
                       animation: etlStatus==='running'?'pulse 1s infinite':undefined,
                     }}>{step}</div>
-                    {i<2 && <span style={{color:'#64748b'}}>→</span>}
+                    {i<2 && <span style={{color:'#64748b'}}>&#8594;</span>}
                   </React.Fragment>
                 ))}
               </div>
@@ -351,7 +659,7 @@ export default function App() {
           </div>
 
           {/* Anomalies */}
-          <div style={S.card}>
+          <div data-tour="anomalies-section" style={{...S.card, ...tourTargetZStyle('anomalies-section')}}>
             <div style={S.sectionTitle}>{t.anomalies}</div>
             {MOCK.anomalies.length===0 ? (
               <div style={{color:'#64748b',fontSize:'.85rem'}}>{t.noAnomalies}</div>
@@ -372,7 +680,33 @@ export default function App() {
         </div>
       </div>
 
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
+      {/* Tour Overlay */}
+      {tourActive && tourStep >= 0 && tourStep < TOUR_STEPS.length && (
+        <TourOverlay
+          step={tourStep}
+          totalSteps={TOUR_STEPS.length}
+          title={TOUR_STEPS[tourStep].title}
+          text={TOUR_STEPS[tourStep].text}
+          position={TOUR_STEPS[tourStep].position}
+          targetSelector={TOUR_STEPS[tourStep].target}
+          onSkip={skipTour}
+          onFinish={finishTour}
+          isLast={tourStep === TOUR_STEPS.length - 1}
+          lang={lang}
+        />
+      )}
+
+      <style>{`
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+        @keyframes tourPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+          50% { box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+        }
+        @keyframes tourFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   )
 }
