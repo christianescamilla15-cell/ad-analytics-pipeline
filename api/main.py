@@ -62,6 +62,9 @@ scheduler.register("etl_meta", interval_seconds=1800)
 scheduler.register("etl_google", interval_seconds=1800)
 scheduler.register("alert_scan", interval_seconds=900)
 
+# Start the scheduler so jobs actually run on intervals
+scheduler.start()
+
 alert_manager = AlertManager()
 roi_calculator = ROICalculator()
 historical_comparison = HistoricalComparison()
