@@ -1,85 +1,86 @@
 # Ad Analytics Pipeline
 
-Full-stack analytics pipeline combining **AWS services** (S3, Lambda, Textract), **OCR/document parsing**, and **Marketing APIs** (Meta Ads, Google Ads, GA4) into a unified dashboard.
+Unified analytics pipeline for marketing and product data across paid media and document workflows.
+
+## Overview
+Ad Analytics Pipeline is a full-stack analytics platform that combines marketing APIs, OCR/document parsing, ETL processing, anomaly detection, and dashboard visualization into a single workflow.
+
+## Problem
+Marketing and product data is fragmented across multiple platforms. Teams need a unified way to ingest, normalize, analyze, and visualize campaign performance and related documents.
+
+## Solution
+This project brings together:
+- Meta Ads API integration
+- Google Ads API integration
+- GA4 Data API integration
+- OCR / invoice parsing with confidence scoring
+- ETL normalization pipeline
+- Z-score anomaly detection
+- React dashboard with bilingual support
+
+## System Architecture
+
+```text
+Marketing APIs + Documents
+          ↓
+FastAPI ETL Layer
+          ↓
+Normalization / Parsing / OCR
+          ↓
+Analytics + Anomaly Detection (z-score)
+          ↓
+React Frontend Dashboard
+```
+
+## Engineering Decisions
+
+### Why FastAPI for ETL?
+To centralize API integration, transformation, and analytics logic in one service layer with async support.
+
+### Why React + Vite?
+To keep the dashboard responsive and modular with fast HMR during development.
+
+### Why anomaly detection?
+To make the platform useful beyond passive reporting — proactive alerts on spending anomalies.
 
 ## Tech Stack
-
 | Layer | Technology |
 |-------|-----------|
 | Backend | Python 3.12, FastAPI, Pydantic |
 | Frontend | React 18, Vite |
-| Cloud | AWS S3, Lambda, Textract (mock) |
-| Marketing | Meta Ads API, Google Ads API, GA4 Data API |
-| OCR | Tesseract-style extractor, PDF parser, Invoice parser |
-| ETL | Custom Extract-Transform-Load pipeline |
-| Analytics | Z-score anomaly detection, unified metrics |
-| Deploy | Docker, Vercel (frontend) |
+| APIs | Meta Ads, Google Ads, GA4 |
+| Processing | OCR, z-score detection |
+| Infra | Docker, Docker Compose |
+| Testing | pytest (124 tests) |
 
-## Features
+## Repo Structure
+```
+api/              # FastAPI backend
+frontend/         # React dashboard
+services/         # ETL & analytics services
+tests/            # 124 automated tests
+data/samples/     # Sample datasets
+```
 
-- **Unified Dashboard** -- KPIs, charts, campaign table across Meta + Google + GA4
-- **OCR Invoice Parsing** -- Regex-based text extraction with structured output
-- **AWS Integration** -- S3 storage, Lambda document processing, Textract OCR
-- **ETL Pipeline** -- Extract from APIs, transform/normalize, load to storage
-- **Anomaly Detection** -- Z-score based spend anomaly alerts
-- **Bilingual UI** -- English/Spanish with automatic detection
-- **Demo Mode** -- Full functionality with realistic mock data (no API keys needed)
+## Key Metrics
+| Metric | Value |
+|--------|-------|
+| APIs Integrated | 3 major platforms |
+| Tests | 124 |
+| Endpoints | 28 |
+| Commits | 9 |
 
-## Quick Start
-
+## How to Run
 ```bash
-# Backend
-pip install fastapi uvicorn pydantic pydantic-settings httpx
-uvicorn api.main:app --reload
-
-# Frontend
-cd frontend && npm install && npm run dev
-
-# Tests
-pip install pytest pytest-asyncio
-python -m pytest tests/ -v
-
-# Docker
+cp .env.example .env
 docker compose up --build
 ```
 
-## API Endpoints
+## Roadmap
+- [ ] Benchmark pipeline latency
+- [ ] Richer campaign attribution views
+- [ ] Alerting workflows
+- [ ] Data warehouse integration
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | /api/health | Health check |
-| GET | /api/overview | Unified metrics overview |
-| GET | /api/platforms/meta | Meta Ads campaigns + insights |
-| GET | /api/platforms/google | Google Ads campaigns + insights |
-| GET | /api/platforms/ga4 | GA4 overview + pages + sources |
-| GET | /api/comparison | Platform comparison |
-| POST | /api/documents/upload | Upload invoice for OCR |
-| POST | /api/documents/parse | Parse invoice text |
-| GET | /api/documents | List parsed documents |
-| POST | /api/etl/run | Trigger ETL pipeline |
-| GET | /api/etl/status | ETL pipeline status |
-| GET | /api/analytics/anomalies | Spend anomaly alerts |
-| GET | /api/analytics/spend-trend | 30-day spend trend |
-| GET | /api/s3/objects | List S3 objects |
-| GET | /api/dashboard | Full dashboard data |
-
-## Project Structure
-
-```
-ad-analytics-pipeline/
-├── config.py                 # Pydantic Settings
-├── api/main.py               # FastAPI app (15 endpoints)
-├── services/
-│   ├── ocr/                  # Text extraction, PDF parsing, invoice parsing
-│   ├── marketing/            # Meta Ads, Google Ads, GA4, unified metrics
-│   ├── aws/                  # S3, Lambda, Textract
-│   ├── etl/                  # Extract-Transform-Load pipeline
-│   └── analytics/            # Dashboard, reports, anomaly detection
-├── frontend/                 # React + Vite dashboard
-├── tests/                    # 45+ tests
-└── data/samples/             # Sample invoices and API responses
-```
-
-## License
-
-This project is licensed for non-commercial, educational, and portfolio use only.
+---
+Built by [Christian Hernandez](https://ch65-portfolio.vercel.app) · AI Engineer
